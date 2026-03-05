@@ -104,6 +104,20 @@
 #define CYW43_LINK_BADAUTH      (-3)    ///< Authenticatation failure
 //!\}
 
+/*!
+ * \name Interference mitigation mode
+ * \anchor CYW43_IFMODE_
+ * \see cyw43_wifi_interference_mode_set() to set the mitigation mode
+ * \see cyw43_wifi_interference_mode_get() to get the mitigation mode
+ */
+//!\{
+#define CYW43_IFMODE_NONE         (0)     ///< None/Disabled
+#define CYW43_IFMODE_NONWLAN      (1)     ///< Non-WLAN
+#define CYW43_IFMODE_WLANMANUAL   (2)     ///< Adjacent channel interference (ACI) mode
+#define CYW43_IFMODE_AUTO         (3)     ///< Automatic as determined by driver (ACI)
+#define CYW43_IFMODE_AUTONOISE    (4)     ///< Automatic as determined by driver with noise reduction (ACI)
+//!\}
+
 typedef struct _cyw43_t {
     cyw43_ll_t cyw43_ll;
 
@@ -199,6 +213,31 @@ int cyw43_ioctl(cyw43_t *self, uint32_t cmd, size_t len, uint8_t *buf, uint32_t 
  * \return 0 on success
  */
 int cyw43_send_ethernet(cyw43_t *self, int itf, size_t len, const void *buf, bool is_pbuf);
+
+/*!
+ * \brief Set the WiFi interference mitigation mode
+ *
+ * Controls how aggressively the firmware attempts to mitigate interference
+ * on the 2.4GHz band. Higher modes reduce interference at the cost of
+ * RX sensitivity, which can be detrimental to long range operation.
+ *
+ * \note This setting applies globally to the radio and affects both the
+ * STA and AP interfaces in apsta mode.
+ *
+ * \param self  The driver state object, always \c &cyw43_state
+ * \param mode  Interference mitigation mode, one of \ref CYW43_IFMODE_
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_wifi_set_interference_mode(cyw43_t *self, uint32_t mode);
+
+/*!
+ * \brief Get the current WiFi interference mitigation mode
+ *
+ * \param self  The driver state object, always \c &cyw43_state
+ * \param mode  Output: current interference mitigation mode, one of \ref CYW43_IFMODE_
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_wifi_get_interference_mode(cyw43_t *self, uint32_t *mode);
 
 /*!
  * \brief Set the wifi power management mode

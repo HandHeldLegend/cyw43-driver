@@ -491,6 +491,41 @@ static int cyw43_wifi_on(cyw43_t *self, uint32_t country) {
     return ret;
 }
 
+int cyw43_wifi_set_interference_mode(cyw43_t *self, uint32_t mode)
+{
+    CYW43_THREAD_ENTER;
+    int ret = cyw43_ensure_up(self);
+    if (ret) {
+        CYW43_THREAD_EXIT;
+        return ret;
+    }
+
+    ret = cyw43_ll_wifi_set_interference_mode(&self->cyw43_ll, mode);
+
+    CYW43_THREAD_EXIT;
+    return ret;
+}
+
+int cyw43_wifi_get_interference_mode(cyw43_t *self, uint32_t *mode)
+{
+    CYW43_THREAD_ENTER;
+    if (!mode) {
+        CYW43_THREAD_EXIT;
+        return -CYW43_EINVAL;
+    }
+
+    int ret = cyw43_ensure_up(self);
+    if (ret) {
+        CYW43_THREAD_EXIT;
+        return ret;
+    }
+
+    ret = cyw43_ll_wifi_get_interference_mode(&self->cyw43_ll, mode);
+
+    CYW43_THREAD_EXIT;
+    return ret;
+}
+
 int cyw43_wifi_pm(cyw43_t *self, uint32_t pm_in) {
     CYW43_THREAD_ENTER;
     int ret = cyw43_ensure_up(self);

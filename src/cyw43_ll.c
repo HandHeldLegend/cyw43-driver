@@ -206,6 +206,8 @@ static void cyw43_xxd(size_t len, const uint8_t *buf) {
 #define WLC_SET_BAND (142)
 #define WLC_GET_ASSOCLIST (159)
 #define WLC_SET_WPA_AUTH (165)
+#define WLC_GET_INTERFERENCE_MODE (211)
+#define WLC_SET_INTERFERENCE_MODE (212)
 #define WLC_SET_VAR (263)
 #define WLC_GET_VAR (262)
 #define WLC_SET_WSEC_PMK (268)
@@ -1972,6 +1974,29 @@ int cyw43_ll_wifi_update_multicast_filter(cyw43_ll_t *self_in, uint8_t *addr, bo
     // write back address list
     cyw43_write_iovar_n(self, "mcast_list", 4 + MAX_MULTICAST_REGISTERED_ADDRESS * 6, buf, WWD_STA_INTERFACE);
     cyw43_delay_ms(50);
+
+    return 0;
+}
+
+int cyw43_ll_wifi_set_interference_mode(cyw43_ll_t *self_in, uint32_t mode)
+{
+    cyw43_int_t *self = CYW_INT_FROM_LL(self_in);
+
+    cyw43_set_ioctl_u32(self, WLC_SET_INTERFERENCE_MODE, mode, WWD_STA_INTERFACE);
+
+    #if 0
+    CYW43_PRINTF("interference_mode: %lu\n", cyw43_get_ioctl_u32(self, WLC_GET_INTERFERENCE_MODE, WWD_STA_INTERFACE));
+    #endif
+
+    return 0;
+}
+
+int cyw43_ll_wifi_get_interference_mode(cyw43_ll_t *self_in, uint32_t *mode)
+{
+    cyw43_int_t *self = CYW_INT_FROM_LL(self_in);
+
+    assert(mode);
+    *mode = cyw43_get_ioctl_u32(self, WLC_GET_INTERFERENCE_MODE, WWD_STA_INTERFACE);
 
     return 0;
 }
