@@ -196,6 +196,12 @@ static void cyw43_xxd(size_t len, const uint8_t *buf) {
 #define WLC_SET_SSID (26)
 #define WLC_SET_CHANNEL (30)
 #define WLC_DISASSOC (52)
+#define WLC_GET_ROAM_TRIGGER (54)
+#define WLC_SET_ROAM_TRIGGER (55)
+#define WLC_GET_ROAM_DELTA (56)
+#define WLC_SET_ROAM_DELTA (57)
+#define WLC_GET_ROAM_SCAN_PERIOD (58)
+#define WLC_SET_ROAM_SCAN_PERIOD (59)
 #define WLC_GET_ANTDIV (63)
 #define WLC_SET_ANTDIV (64)
 #define WLC_SET_DTIMPRD (78)
@@ -1991,12 +1997,62 @@ int cyw43_ll_wifi_set_interference_mode(cyw43_ll_t *self_in, uint32_t mode)
     return 0;
 }
 
+int cyw43_ll_wifi_set_roam_enabled(cyw43_ll_t *self_in, bool enabled)
+{
+    cyw43_int_t *self = CYW_INT_FROM_LL(self_in);
+
+    cyw43_write_iovar_u32(self, "roam_off", enabled ? 0 : 1, WWD_STA_INTERFACE);
+
+    #if 0
+    CYW43_PRINTF("roam_off: %lu\n", cyw43_read_iovar_u32(self, "roam_off", WWD_STA_INTERFACE));
+
+    #endif
+
+    return 0;
+}
+
 int cyw43_ll_wifi_get_interference_mode(cyw43_ll_t *self_in, uint32_t *mode)
 {
     cyw43_int_t *self = CYW_INT_FROM_LL(self_in);
 
     assert(mode);
     *mode = cyw43_get_ioctl_u32(self, WLC_GET_INTERFERENCE_MODE, WWD_STA_INTERFACE);
+  
+     return 0;
+}
+
+int cyw43_ll_wifi_set_roam_params(cyw43_ll_t *self_in, int trigger_dbm, int candidate_delta_db, int scan_period_ms)
+{
+    cyw43_int_t *self = CYW_INT_FROM_LL(self_in);
+
+    cyw43_set_ioctl_u32(self, WLC_SET_ROAM_TRIGGER, (uint32_t)trigger_dbm, WWD_STA_INTERFACE);
+    cyw43_set_ioctl_u32(self, WLC_SET_ROAM_DELTA, (uint32_t)candidate_delta_db, WWD_STA_INTERFACE);
+    cyw43_set_ioctl_u32(self, WLC_SET_ROAM_SCAN_PERIOD, (uint32_t)scan_period_ms, WWD_STA_INTERFACE);
+
+    #if 0
+    CYW43_PRINTF("roam_trigger: %d\n", (int32_t)cyw43_get_ioctl_u32(self, WLC_GET_ROAM_TRIGGER, WWD_STA_INTERFACE));
+    CYW43_PRINTF("roam_delta: %d\n", (int32_t)cyw43_get_ioctl_u32(self, WLC_GET_ROAM_DELTA, WWD_STA_INTERFACE));
+    CYW43_PRINTF("roam_scan_period: %d\n", (int32_t)cyw43_get_ioctl_u32(self, WLC_GET_ROAM_SCAN_PERIOD, WWD_STA_INTERFACE));
+    #endif
+
+    return 0;
+}
+
+int cyw43_ll_wifi_get_roam_params(cyw43_ll_t *self_in, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms)
+{
+    cyw43_int_t *self = CYW_INT_FROM_LL(self_in);
+
+    if (trigger_dbm) {
+        *trigger_dbm = (int32_t)cyw43_get_ioctl_u32(self, WLC_GET_ROAM_TRIGGER, WWD_STA_INTERFACE);
+    }
+
+    if (candidate_delta_db) {
+        *candidate_delta_db = (int32_t)cyw43_get_ioctl_u32(self, WLC_GET_ROAM_DELTA, WWD_STA_INTERFACE);
+    }
+
+    if (scan_period_ms) {
+        *scan_period_ms = (int32_t)cyw43_get_ioctl_u32(self, WLC_GET_ROAM_SCAN_PERIOD, WWD_STA_INTERFACE);
+    }
 
     return 0;
 }

@@ -400,6 +400,63 @@ int cyw43_wifi_join(cyw43_t *self, size_t ssid_len, const uint8_t *ssid, size_t 
 int cyw43_wifi_leave(cyw43_t *self, int itf);
 
 /*!
+ * \brief Enable or disable WiFi roaming on the STA interface
+ *
+ * When disabled, the firmware will remain associated to its current AP
+ * regardless of signal strength. When enabled, roaming behaviour is
+ * governed by the parameters set in \c cyw43_wifi_set_roam_params.
+ *
+ * Roaming is enabled by default. 
+ *
+ * \param self     The driver state object, always \c &cyw43_state
+ * \param enabled  true to enable roaming, false to disable
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_wifi_set_roam_enabled(cyw43_t *self, bool enabled);
+
+/*!
+ * \brief Configure WiFi roaming parameters for the STA interface
+ *
+ * Controls when the firmware will scan for and switch to a better AP.
+ * Roaming is a STA-mode only feature - these parameters have no effect
+ * when called on the AP interface.
+ *
+ * The firmware begins scanning for alternative APs when the current AP's
+ * RSSI drops below \p trigger_dbm. A candidate AP must have an RSSI at
+ * least \p candidate_delta_db higher than the current AP before the
+ * firmware will roam to it. This prevents thrashing between APs of
+ * similar signal strength.
+ *
+ * \param self          The driver state object, always \c &cyw43_state
+ * \param trigger_dbm   RSSI threshold in dBm below which roam scanning begins.
+ *                      Typical value: -75. Must be negative.
+ * \param candidate_delta_db  Minimum RSSI improvement in dB a candidate AP
+ *                      must offer over the current AP to trigger a roam.
+ *                      Typical value: 10.
+ * \param scan_period_ms How often in milliseconds the firmware scans for better
+ *                      APs while below the trigger threshold.
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_wifi_set_roam_params(cyw43_t *self, int trigger_dbm, int candidate_delta_db, int scan_period_ms);
+
+/*!
+ * \brief Retrieve the current WiFi roaming parameters for the STA interface
+ *
+ * Reads back the roaming parameters that are currently set.
+ * Any pointer may be NULL if that parameter is not required.
+ *
+ * \param self                The driver state object, always \c &cyw43_state
+ * \param trigger_dbm         Output: RSSI threshold in dBm below which roam
+ *                            scanning begins. Will be a negative value.
+ * \param candidate_delta_db  Output: Minimum RSSI improvement in dB a candidate
+ *                            AP must offer over the current AP to trigger a roam.
+ * \param scan_period_ms      Output: How often in milliseconds the firmware scans
+ *                            for better APs while below the trigger threshold.
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_wifi_get_roam_params(cyw43_t *self, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms);
+
+/*!
  * \brief Get the signal strength (RSSI) of the wifi network
  *
  * For STA (client) mode, returns the signal strength or RSSI of the wifi network.

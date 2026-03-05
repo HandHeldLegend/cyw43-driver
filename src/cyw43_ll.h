@@ -284,6 +284,10 @@ int cyw43_ll_wifi_pm(cyw43_ll_t *self, uint32_t pm, uint32_t pm_sleep_ret, uint3
 int cyw43_ll_wifi_get_pm(cyw43_ll_t *self, uint32_t *pm, uint32_t *pm_sleep_ret, uint32_t *li_bcn, uint32_t *li_dtim, uint32_t *li_assoc);
 int cyw43_ll_wifi_scan(cyw43_ll_t *self, cyw43_wifi_scan_options_t *opts);
 
+int cyw43_ll_wifi_set_roam_enabled(cyw43_ll_t *self_in, bool enabled);
+int cyw43_ll_wifi_set_roam_params(cyw43_ll_t *self_in, int trigger_dbm, int candidate_delta_db, int scan_period_ms);
+int cyw43_ll_wifi_get_roam_params(cyw43_ll_t *self_in, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms);
+
 int cyw43_ll_wifi_join(cyw43_ll_t *self, size_t ssid_len, const uint8_t *ssid, size_t key_len, const uint8_t *key, uint32_t auth_type, const uint8_t *bssid, uint32_t channel);
 void cyw43_ll_wifi_set_wpa_auth(cyw43_ll_t *self);
 void cyw43_ll_wifi_rejoin(cyw43_ll_t *self);
