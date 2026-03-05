@@ -668,6 +668,65 @@ int cyw43_wifi_leave(cyw43_t *self, int itf) {
     return cyw43_ioctl(self, CYW43_IOCTL_SET_DISASSOC, 0, NULL, itf);
 }
 
+int cyw43_wifi_set_roam_enabled(cyw43_t *self, bool enabled)
+{
+    CYW43_THREAD_ENTER;
+    if (!CYW43_STA_IS_ACTIVE(self)) {
+        CYW43_THREAD_EXIT;
+        return -CYW43_EPERM;
+    }
+
+    int ret = cyw43_ensure_up(self);
+    if (ret) {
+        CYW43_THREAD_EXIT;
+        return ret;
+    }
+
+    ret = cyw43_ll_wifi_set_roam_enabled(&self->cyw43_ll, enabled);
+
+    CYW43_THREAD_EXIT;
+    return ret;
+}
+
+int cyw43_wifi_set_roam_params(cyw43_t *self, int trigger_dbm, int candidate_delta_db, int scan_period_ms)
+{
+    CYW43_THREAD_ENTER;
+    if (!CYW43_STA_IS_ACTIVE(self)) {
+        CYW43_THREAD_EXIT;
+        return -CYW43_EPERM;
+    }
+
+    int ret = cyw43_ensure_up(self);
+    if (ret) {
+        CYW43_THREAD_EXIT;
+        return ret;
+    }
+
+    ret = cyw43_ll_wifi_set_roam_params(&self->cyw43_ll, trigger_dbm, candidate_delta_db, scan_period_ms);
+
+    CYW43_THREAD_EXIT;
+    return ret;
+}
+
+int cyw43_wifi_get_roam_params(cyw43_t *self, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms)
+{
+    CYW43_THREAD_ENTER;
+    if (!CYW43_STA_IS_ACTIVE(self)) {
+        CYW43_THREAD_EXIT;
+        return -CYW43_EPERM;
+    }
+
+    int ret = cyw43_ensure_up(self);
+    if (ret) {
+        CYW43_THREAD_EXIT;
+        return ret;
+    }
+
+    ret = cyw43_ll_wifi_get_roam_params(&self->cyw43_ll, trigger_dbm, candidate_delta_db, scan_period_ms);
+
+    CYW43_THREAD_EXIT;
+    return ret;
+}
 
 int cyw43_wifi_get_rssi(cyw43_t *self, int32_t *rssi) {
     if (!rssi || !CYW43_STA_IS_ACTIVE(self)) {
