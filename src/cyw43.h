@@ -107,8 +107,8 @@
 /*!
  * \name Interference mitigation mode
  * \anchor CYW43_IFMODE_
- * \see cyw43_wifi_interference_mode_set() to set the mitigation mode
- * \see cyw43_wifi_interference_mode_get() to get the mitigation mode
+ * \see cyw43_wifi_set_interference_mode() to set the mitigation mode
+ * \see cyw43_wifi_get_interference_mode() to get the mitigation mode
  */
 //!\{
 #define CYW43_IFMODE_NONE         (0)     ///< None/Disabled
@@ -201,6 +201,34 @@ void cyw43_deinit(cyw43_t *self);
 int cyw43_ioctl(cyw43_t *self, uint32_t cmd, size_t len, uint8_t *buf, uint32_t iface);
 
 /*!
+ * \brief Set an ioctl whose value is a single unsigned 32-bit integer
+ *
+ * Convenience wrapper around \ref cyw43_ioctl for the common case of an ioctl
+ * that takes a 4-byte value, e.g. the various \c CYW43_IOCTL_SET_xxx commands.
+ *
+ * \param self  the driver state object. This should always be \c &cyw43_state
+ * \param cmd   the ioctl command to send, e.g. one of the \c CYW43_IOCTL_SET_xxx defines
+ * \param val   the value to set
+ * \param iface the interface to use, either \ref CYW43_ITF_STA or \ref CYW43_ITF_AP
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_ioctl_set_u32(cyw43_t *self, uint32_t cmd, uint32_t val, uint32_t iface);
+
+/*!
+ * \brief Get an ioctl whose value is a single unsigned 32-bit integer
+ *
+ * Convenience wrapper around \ref cyw43_ioctl for the common case of an ioctl
+ * that returns a 4-byte value, e.g. the various \c CYW43_IOCTL_GET_xxx commands.
+ *
+ * \param self    the driver state object. This should always be \c &cyw43_state
+ * \param cmd     the ioctl command to send, e.g. one of the \c CYW43_IOCTL_GET_xxx defines
+ * \param out_val Output: the value that was read. May be NULL.
+ * \param iface   the interface to use, either \ref CYW43_ITF_STA or \ref CYW43_ITF_AP
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_ioctl_get_u32(cyw43_t *self, uint32_t cmd, uint32_t *out_val, uint32_t iface);
+
+/*!
  * \brief Send a raw ethernet packet
  *
  * This method sends a raw ethernet packet.
@@ -228,7 +256,9 @@ int cyw43_send_ethernet(cyw43_t *self, int itf, size_t len, const void *buf, boo
  * \param mode  Interference mitigation mode, one of \ref CYW43_IFMODE_
  * \return 0 on success, negative error code on failure
  */
-int cyw43_wifi_set_interference_mode(cyw43_t *self, uint32_t mode);
+static inline int cyw43_wifi_set_interference_mode(cyw43_t *self, uint32_t mode) {
+    return cyw43_ioctl_set_u32(self, CYW43_IOCTL_SET_INTERFERENCE_MODE, mode, CYW43_ITF_STA);
+}
 
 /*!
  * \brief Get the current WiFi interference mitigation mode
@@ -237,7 +267,9 @@ int cyw43_wifi_set_interference_mode(cyw43_t *self, uint32_t mode);
  * \param mode  Output: current interference mitigation mode, one of \ref CYW43_IFMODE_
  * \return 0 on success, negative error code on failure
  */
-int cyw43_wifi_get_interference_mode(cyw43_t *self, uint32_t *mode);
+static inline int cyw43_wifi_get_interference_mode(cyw43_t *self, uint32_t *mode) {
+    return cyw43_ioctl_get_u32(self, CYW43_IOCTL_GET_INTERFERENCE_MODE, mode, CYW43_ITF_STA);
+}
 
 /*!
  * \brief Set the wifi power management mode
@@ -415,6 +447,17 @@ int cyw43_wifi_leave(cyw43_t *self, int itf);
 int cyw43_wifi_set_roam_enabled(cyw43_t *self, bool enabled);
 
 /*!
+ * \brief Query whether WiFi roaming is enabled on the STA interface
+ *
+ * Reads back the current state of the \c roam_off iovar.
+ *
+ * \param self     The driver state object, always \c &cyw43_state
+ * \param enabled  Output: true if roaming is enabled, false if disabled
+ * \return 0 on success, negative error code on failure
+ */
+int cyw43_wifi_get_roam_enabled(cyw43_t *self, bool *enabled);
+
+/*!
  * \brief Configure WiFi roaming parameters for the STA interface
  *
  * Controls when the firmware will scan for and switch to a better AP.
@@ -437,7 +480,17 @@ int cyw43_wifi_set_roam_enabled(cyw43_t *self, bool enabled);
  *                      APs while below the trigger threshold.
  * \return 0 on success, negative error code on failure
  */
-int cyw43_wifi_set_roam_params(cyw43_t *self, int trigger_dbm, int candidate_delta_db, int scan_period_ms);
+static inline int cyw43_wifi_set_roam_params(cyw43_t *self, int trigger_dbm, int candidate_delta_db, int scan_period_ms) {
+    int ret = cyw43_ioctl_set_u32(self, CYW43_IOCTL_SET_ROAM_TRIGGER, (uint32_t)trigger_dbm, CYW43_ITF_STA);
+    if (ret) {
+        return ret;
+    }
+    ret = cyw43_ioctl_set_u32(self, CYW43_IOCTL_SET_ROAM_DELTA, (uint32_t)candidate_delta_db, CYW43_ITF_STA);
+    if (ret) {
+        return ret;
+    }
+    return cyw43_ioctl_set_u32(self, CYW43_IOCTL_SET_ROAM_SCAN_PERIOD, (uint32_t)scan_period_ms, CYW43_ITF_STA);
+}
 
 /*!
  * \brief Retrieve the current WiFi roaming parameters for the STA interface
@@ -454,7 +507,32 @@ int cyw43_wifi_set_roam_params(cyw43_t *self, int trigger_dbm, int candidate_del
  *                            for better APs while below the trigger threshold.
  * \return 0 on success, negative error code on failure
  */
-int cyw43_wifi_get_roam_params(cyw43_t *self, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms);
+static inline int cyw43_wifi_get_roam_params(cyw43_t *self, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms) {
+    uint32_t val;
+    int ret;
+    if (trigger_dbm != NULL) {
+        ret = cyw43_ioctl_get_u32(self, CYW43_IOCTL_GET_ROAM_TRIGGER, &val, CYW43_ITF_STA);
+        if (ret) {
+            return ret;
+        }
+        *trigger_dbm = (int)(int32_t)val;
+    }
+    if (candidate_delta_db != NULL) {
+        ret = cyw43_ioctl_get_u32(self, CYW43_IOCTL_GET_ROAM_DELTA, &val, CYW43_ITF_STA);
+        if (ret) {
+            return ret;
+        }
+        *candidate_delta_db = (int)(int32_t)val;
+    }
+    if (scan_period_ms != NULL) {
+        ret = cyw43_ioctl_get_u32(self, CYW43_IOCTL_GET_ROAM_SCAN_PERIOD, &val, CYW43_ITF_STA);
+        if (ret) {
+            return ret;
+        }
+        *scan_period_ms = (int)(int32_t)val;
+    }
+    return 0;
+}
 
 /*!
  * \brief Get the signal strength (RSSI) of the wifi network

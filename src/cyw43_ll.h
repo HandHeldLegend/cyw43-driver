@@ -56,10 +56,18 @@
 #define CYW43_IOCTL_GET_SSID            (0x32)
 #define CYW43_IOCTL_GET_CHANNEL         (0x3a)
 #define CYW43_IOCTL_SET_DISASSOC        (0x69)
+#define CYW43_IOCTL_GET_ROAM_TRIGGER    (0x6c)
+#define CYW43_IOCTL_SET_ROAM_TRIGGER    (0x6f)
+#define CYW43_IOCTL_GET_ROAM_DELTA      (0x70)
+#define CYW43_IOCTL_SET_ROAM_DELTA      (0x73)
+#define CYW43_IOCTL_GET_ROAM_SCAN_PERIOD (0x74)
+#define CYW43_IOCTL_SET_ROAM_SCAN_PERIOD (0x77)
 #define CYW43_IOCTL_GET_ANTDIV          (0x7e)
 #define CYW43_IOCTL_SET_ANTDIV          (0x81)
 #define CYW43_IOCTL_SET_MONITOR         (0xd9)
 #define CYW43_IOCTL_GET_RSSI            (0xfe)
+#define CYW43_IOCTL_GET_INTERFERENCE_MODE (0x1a6)
+#define CYW43_IOCTL_SET_INTERFERENCE_MODE (0x1a9)
 #define CYW43_IOCTL_GET_VAR             (0x20c)
 #define CYW43_IOCTL_SET_VAR             (0x20f)
 
@@ -276,17 +284,10 @@ void cyw43_ll_process_packets(cyw43_ll_t *self);
 int cyw43_ll_ioctl(cyw43_ll_t *self, uint32_t cmd, size_t len, uint8_t *buf, uint32_t iface);
 int cyw43_ll_send_ethernet(cyw43_ll_t *self, int itf, size_t len, const void *buf, bool is_pbuf);
 
-int cyw43_ll_wifi_set_interference_mode(cyw43_ll_t *self_in, uint32_t mode);
-int cyw43_ll_wifi_get_interference_mode(cyw43_ll_t *self_in, uint32_t *mode);
-
 int cyw43_ll_wifi_on(cyw43_ll_t *self, uint32_t country);
 int cyw43_ll_wifi_pm(cyw43_ll_t *self, uint32_t pm, uint32_t pm_sleep_ret, uint32_t li_bcn, uint32_t li_dtim, uint32_t li_assoc);
 int cyw43_ll_wifi_get_pm(cyw43_ll_t *self, uint32_t *pm, uint32_t *pm_sleep_ret, uint32_t *li_bcn, uint32_t *li_dtim, uint32_t *li_assoc);
 int cyw43_ll_wifi_scan(cyw43_ll_t *self, cyw43_wifi_scan_options_t *opts);
-
-int cyw43_ll_wifi_set_roam_enabled(cyw43_ll_t *self_in, bool enabled);
-int cyw43_ll_wifi_set_roam_params(cyw43_ll_t *self_in, int trigger_dbm, int candidate_delta_db, int scan_period_ms);
-int cyw43_ll_wifi_get_roam_params(cyw43_ll_t *self_in, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms);
 
 int cyw43_ll_wifi_join(cyw43_ll_t *self, size_t ssid_len, const uint8_t *ssid, size_t key_len, const uint8_t *key, uint32_t auth_type, const uint8_t *bssid, uint32_t channel);
 void cyw43_ll_wifi_set_wpa_auth(cyw43_ll_t *self);

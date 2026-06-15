@@ -455,6 +455,22 @@ int cyw43_ioctl(cyw43_t *self, uint32_t cmd, size_t len, uint8_t *buf, uint32_t 
     return ret;
 }
 
+int cyw43_ioctl_set_u32(cyw43_t *self, uint32_t cmd, uint32_t val, uint32_t iface) {
+    // The wire format is little-endian; RP2 hosts are little-endian so the
+    // value can be passed straight through (matching cyw43_wifi_get_rssi()).
+    uint32_t buf = val;
+    return cyw43_ioctl(self, cmd, sizeof(buf), (uint8_t *)&buf, iface);
+}
+
+int cyw43_ioctl_get_u32(cyw43_t *self, uint32_t cmd, uint32_t *out_val, uint32_t iface) {
+    uint32_t buf = 0;
+    int ret = cyw43_ioctl(self, cmd, sizeof(buf), (uint8_t *)&buf, iface);
+    if (ret == 0 && out_val != NULL) {
+        *out_val = buf;
+    }
+    return ret;
+}
+
 int cyw43_send_ethernet(cyw43_t *self, int itf, size_t len, const void *buf, bool is_pbuf) {
     CYW43_THREAD_ENTER;
     int ret = cyw43_ensure_up(self);
@@ -488,41 +504,6 @@ static int cyw43_wifi_on(cyw43_t *self, uint32_t country) {
     ret = cyw43_ll_wifi_on(&self->cyw43_ll, country);
     CYW43_THREAD_EXIT;
 
-    return ret;
-}
-
-int cyw43_wifi_set_interference_mode(cyw43_t *self, uint32_t mode)
-{
-    CYW43_THREAD_ENTER;
-    int ret = cyw43_ensure_up(self);
-    if (ret) {
-        CYW43_THREAD_EXIT;
-        return ret;
-    }
-
-    ret = cyw43_ll_wifi_set_interference_mode(&self->cyw43_ll, mode);
-
-    CYW43_THREAD_EXIT;
-    return ret;
-}
-
-int cyw43_wifi_get_interference_mode(cyw43_t *self, uint32_t *mode)
-{
-    CYW43_THREAD_ENTER;
-    if (!mode) {
-        CYW43_THREAD_EXIT;
-        return -CYW43_EINVAL;
-    }
-
-    int ret = cyw43_ensure_up(self);
-    if (ret) {
-        CYW43_THREAD_EXIT;
-        return ret;
-    }
-
-    ret = cyw43_ll_wifi_get_interference_mode(&self->cyw43_ll, mode);
-
-    CYW43_THREAD_EXIT;
     return ret;
 }
 
@@ -703,63 +684,44 @@ int cyw43_wifi_leave(cyw43_t *self, int itf) {
     return cyw43_ioctl(self, CYW43_IOCTL_SET_DISASSOC, 0, NULL, itf);
 }
 
-int cyw43_wifi_set_roam_enabled(cyw43_t *self, bool enabled)
-{
-    CYW43_THREAD_ENTER;
-    if (!CYW43_STA_IS_ACTIVE(self)) {
-        CYW43_THREAD_EXIT;
-        return -CYW43_EPERM;
-    }
-
-    int ret = cyw43_ensure_up(self);
-    if (ret) {
-        CYW43_THREAD_EXIT;
-        return ret;
-    }
-
-    ret = cyw43_ll_wifi_set_roam_enabled(&self->cyw43_ll, enabled);
-
-    CYW43_THREAD_EXIT;
-    return ret;
+int cyw43_wifi_set_roam_enabled(cyw43_t *self, bool enabled) {
+    // "roam_off" is a string-named iovar rather than a numbered ioctl, so it is
+    // sent via the WLC_SET_VAR ioctl with a "<name>\0<le32 value>" payload.
+    static const char var[] = "roam_off";
+    const size_t name_len = sizeof(var); // includes the NUL terminator
+    uint8_t buf[sizeof(var) + 4];
+    memcpy(buf, var, name_len);
+    // roam_off == 1 disables roaming, 0 enables it. Only the low byte is
+    // significant; store little-endian byte-wise to avoid unaligned access.
+    buf[name_len + 0] = enabled ? 0 : 1;
+    buf[name_len + 1] = 0;
+    buf[name_len + 2] = 0;
+    buf[name_len + 3] = 0;
+    return cyw43_ioctl(self, CYW43_IOCTL_SET_VAR, name_len + 4, buf, CYW43_ITF_STA);
 }
 
-int cyw43_wifi_set_roam_params(cyw43_t *self, int trigger_dbm, int candidate_delta_db, int scan_period_ms)
-{
-    CYW43_THREAD_ENTER;
-    if (!CYW43_STA_IS_ACTIVE(self)) {
-        CYW43_THREAD_EXIT;
-        return -CYW43_EPERM;
+int cyw43_wifi_get_roam_enabled(cyw43_t *self, bool *enabled) {
+    if (enabled == NULL) {
+        return -CYW43_EINVAL;
     }
-
-    int ret = cyw43_ensure_up(self);
-    if (ret) {
-        CYW43_THREAD_EXIT;
-        return ret;
+    // Read the "roam_off" iovar back via the WLC_GET_VAR ioctl. The variable
+    // name is written into the buffer and the firmware replaces it with the
+    // little-endian u32 value on return (see how CYW43_IOCTL_GET_VAR is used).
+    static const char var[] = "roam_off";
+    const size_t name_len = sizeof(var); // includes the NUL terminator
+    uint8_t buf[sizeof(var) + 4];
+    memcpy(buf, var, name_len);
+    buf[name_len + 0] = 0;
+    buf[name_len + 1] = 0;
+    buf[name_len + 2] = 0;
+    buf[name_len + 3] = 0;
+    int ret = cyw43_ioctl(self, CYW43_IOCTL_GET_VAR, name_len + 4, buf, CYW43_ITF_STA);
+    if (ret == 0) {
+        uint32_t roam_off = (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
+            ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
+        // roam_off != 0 means roaming is disabled.
+        *enabled = (roam_off == 0);
     }
-
-    ret = cyw43_ll_wifi_set_roam_params(&self->cyw43_ll, trigger_dbm, candidate_delta_db, scan_period_ms);
-
-    CYW43_THREAD_EXIT;
-    return ret;
-}
-
-int cyw43_wifi_get_roam_params(cyw43_t *self, int *trigger_dbm, int *candidate_delta_db, int *scan_period_ms)
-{
-    CYW43_THREAD_ENTER;
-    if (!CYW43_STA_IS_ACTIVE(self)) {
-        CYW43_THREAD_EXIT;
-        return -CYW43_EPERM;
-    }
-
-    int ret = cyw43_ensure_up(self);
-    if (ret) {
-        CYW43_THREAD_EXIT;
-        return ret;
-    }
-
-    ret = cyw43_ll_wifi_get_roam_params(&self->cyw43_ll, trigger_dbm, candidate_delta_db, scan_period_ms);
-
-    CYW43_THREAD_EXIT;
     return ret;
 }
 
